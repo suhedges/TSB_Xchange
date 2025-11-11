@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Interchange Lookup</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+<link href="./assets/styles.css" rel="stylesheet"/>
+</head>
+<body>
+
+<div id="loader" class="loader-backdrop" aria-live="polite" aria-busy="true">
+  <div class="spinner" aria-label="Loading data…"></div>
+</div>
+
+<div class="wrap disabled" id="appRoot">
+  <div class="hero">
+    <div class="title">TSB Xchange</div>
+    <div class="subtitle">Choose a brand or "NONE" for all brands. Double-click results with a green background to view available details. Use Focus to restrict results to preferred brands.</div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="bearings">Bearings</div>
+    <div class="tab" data-tab="couplings">Couplings</div>
+    <div class="tab" data-tab="motors">Motors</div>
+    <div class="tab" data-tab="oilseals">Oil Seals</div>
+    <div class="tab" data-tab="pumpseals">Pump Seals</div>
+  </div>
+
+  <!-- Panels (identical structure; data loads lazily per tab) -->
+
+  <div class="panel active" id="panel-bearings">
+    <div class="card">
+      <div class="controls">
+        <div>
+          <label for="brand-b">Brand</label>
+          <select id="brand-b" disabled></select>
+        </div>
+        <div class="suggest">
+          <label for="part-b">Part Number</label>
+          <input id="part-b" type="text" inputmode="text" autocomplete="off" placeholder="Type part number…" disabled/>
+          <div id="suggestList-b" class="suggest-list"></div>
+        </div>
+        <div style="align-self:end">
+          <button id="searchBtn-b" class="primary" disabled>Find Interchanges</button>
+        </div>
+        <div style="align-self:end">
+          <button id="resetBtn-b" class="ghost" disabled>Reset</button>
+        </div>
+        <div class="focus-wrap">
+          <label class="toggle" title="When ON, only show results from preferred brands">
+            <input id="focus-b" type="checkbox" disabled />
+            <span>Focus</span>
+          </label>
+        </div>
+      </div>
+      <div class="results" id="results-b"></div>
+      <div class="footer-note">Tips: "NONE" = search all brands • Focus filters results to preferred brands only • suggestions ignore spaces/dashes/case</div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-couplings">
+    <div class="card">
+      <div class="controls">
+        <div>
+          <label for="brand-c">Brand</label>
+          <select id="brand-c" disabled></select>
+        </div>
+        <div class="suggest">
+          <label for="part-c">Part Number</label>
+          <input id="part-c" type="text" inputmode="text" autocomplete="off" placeholder="Type part number…" disabled/>
+          <div id="suggestList-c" class="suggest-list"></div>
+        </div>
+        <div style="align-self:end">
+          <button id="searchBtn-c" class="primary" disabled>Find Interchanges</button>
+        </div>
+        <div style="align-self:end">
+          <button id="resetBtn-c" class="ghost" disabled>Reset</button>
+        </div>
+        <div class="focus-wrap">
+          <label class="toggle" title="When ON, only show results from preferred brands">
+            <input id="focus-c" type="checkbox" disabled />
+            <span>Focus</span>
+          </label>
+        </div>
+      </div>
+      <div class="results" id="results-c"></div>
+      <div class="footer-note">Dataset: Couplings</div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-motors">
+    <div class="card">
+      <div class="controls">
+        <div>
+          <label for="brand-m">Brand</label>
+          <select id="brand-m" disabled></select>
+        </div>
+        <div class="suggest">
+          <label for="part-m">Part Number</label>
+          <input id="part-m" type="text" inputmode="text" autocomplete="off" placeholder="Type part number…" disabled/>
+          <div id="suggestList-m" class="suggest-list"></div>
+        </div>
+        <div style="align-self:end">
+          <button id="searchBtn-m" class="primary" disabled>Find Interchanges</button>
+        </div>
+        <div style="align-self:end">
+          <button id="resetBtn-m" class="ghost" disabled>Reset</button>
+        </div>
+        <div class="focus-wrap">
+          <label class="toggle" title="When ON, only show results from preferred brands">
+            <input id="focus-m" type="checkbox" disabled />
+            <span>Focus</span>
+          </label>
+        </div>
+      </div>
+      <div class="results" id="results-m"></div>
+      <div class="footer-note">Dataset: Motors</div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-oilseals">
+    <div class="card">
+      <div class="controls">
+        <div>
+          <label for="brand-o">Brand</label>
+          <select id="brand-o" disabled></select>
+        </div>
+        <div class="suggest">
+          <label for="part-o">Part Number</label>
+          <input id="part-o" type="text" inputmode="text" autocomplete="off" placeholder="Type part number…" disabled/>
+          <div id="suggestList-o" class="suggest-list"></div>
+        </div>
+        <div style="align-self:end">
+          <button id="searchBtn-o" class="primary" disabled>Find Interchanges</button>
+        </div>
+        <div style="align-self:end">
+          <button id="resetBtn-o" class="ghost" disabled>Reset</button>
+        </div>
+        <div class="focus-wrap">
+          <label class="toggle" title="When ON, only show results from preferred brands">
+            <input id="focus-o" type="checkbox" disabled />
+            <span>Focus</span>
+          </label>
+        </div>
+      </div>
+      <div class="results" id="results-o"></div>
+      <div class="footer-note">Dataset: Oil Seals</div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-pumpseals">
+    <div class="card">
+      <div class="controls">
+        <div>
+          <label for="brand-p">Brand</label>
+          <select id="brand-p" disabled></select>
+        </div>
+        <div class="suggest">
+          <label for="part-p">Part Number</label>
+          <input id="part-p" type="text" inputmode="text" autocomplete="off" placeholder="Type part number…" disabled/>
+          <div id="suggestList-p" class="suggest-list"></div>
+        </div>
+        <div style="align-self:end">
+          <button id="searchBtn-p" class="primary" disabled>Find Interchanges</button>
+        </div>
+        <div style="align-self:end">
+          <button id="resetBtn-p" class="ghost" disabled>Reset</button>
+        </div>
+        <div class="focus-wrap">
+          <label class="toggle" title="When ON, only show results from preferred brands">
+            <input id="focus-p" type="checkbox" disabled />
+            <span>Focus</span>
+          </label>
+        </div>
+      </div>
+      <div class="results" id="results-p"></div>
+      <div class="footer-note">Dataset: Pump Seals</div>
+    </div>
+  </div>
+</div>
+
+<script src="./assets/app.js" defer></script>
+</body>
+</html>
