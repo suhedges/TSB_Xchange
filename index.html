@@ -9,8 +9,18 @@
 </head>
 <body>
 
-<div id="loader" class="loader-backdrop" aria-live="polite" aria-busy="true">
+<div id="loader" class="loader-backdrop hidden" aria-live="polite" aria-busy="false">
   <div class="spinner" aria-label="Loading data…"></div>
+</div>
+
+<div id="loadStatus" class="load-status hidden" aria-live="polite">
+  <div class="load-row">
+    <div id="loadTitle" class="load-title">Loading data...</div>
+    <div id="loadMeta" class="load-meta">0%</div>
+  </div>
+  <div class="load-track">
+    <div id="loadBar" class="load-bar"></div>
+  </div>
 </div>
 
 <div class="wrap disabled" id="appRoot">
