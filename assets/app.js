@@ -5,6 +5,9 @@ const norm = (s) => (s ?? "").toString().replace(/[^A-Za-z0-9]+/g, "").toUpperCa
 const FLAG_SPECS = 1;
 const FLAG_IMAGES = 2;
 const FLAG_DOCS = 4;
+const PAGE_SIZE_SMALL = 5;
+const PAGE_STATE = { bearings: 0, couplings: 0, motors: 0, oils: 0, pumps: 0 };
+const LAST_SEARCH = { bearings: null, couplings: null, motors: null, oils: null, pumps: null };
 function lowerBoundPrefix(arr, prefix) { let lo = 0, hi = arr.length; while (lo < hi) { const mid = (lo + hi) >>> 1; if (arr[mid][0] < prefix) lo = mid + 1; else hi = mid; } return lo; }
 function escapeHtml(s) { return (s ?? "").toString().replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;"); }
 function nodeBrand(d, id) {
@@ -40,6 +43,72 @@ function readNodeDetails(panelKey, nodeId) {
   const entry = d?.DETAILS?.get(nodeId);
   if (!entry) return { specs: null, images: null, docs: null };
   return entry;
+}
+
+function isVerySmallScreen() {
+  const w = window.innerWidth || document.documentElement.clientWidth || 9999;
+  const h = window.innerHeight || document.documentElement.clientHeight || 9999;
+  const bySize = (w <= 420 || h <= 420);
+  let byCss = false;
+  try {
+    byCss = getComputedStyle(document.documentElement).getPropertyValue("--tiny-screen").trim() === "1";
+  } catch {}
+  if (typeof window.matchMedia === "function") {
+    return window.matchMedia("(max-width: 420px), (max-height: 420px)").matches || byCss || bySize;
+  }
+  return byCss || bySize;
+}
+
+function applyTinyMode() {
+  const tiny = isVerySmallScreen();
+  document.body?.classList.toggle("tiny", tiny);
+  document.querySelectorAll(".subtitle").forEach(el => {
+    el.style.display = tiny ? "none" : "";
+  });
+  document.querySelectorAll(".controls .action-cell .primary").forEach(el => {
+    el.style.display = tiny ? "none" : "";
+  });
+  return tiny;
+}
+
+function updatePagerUi(panelKey, show, page, totalPages) {
+  const prefix = panelKey === "pumps" ? "p" : panelKey[0];
+  const wrap = byId(`pager-${prefix}`);
+  const prev = byId(`pagerPrev-${prefix}`);
+  const next = byId(`pagerNext-${prefix}`);
+  const meta = byId(`pagerMeta-${prefix}`);
+  if (!wrap || !prev || !next || !meta) return;
+  if (!show) {
+    wrap.classList.add("hidden");
+    wrap.setAttribute("aria-hidden","true");
+    wrap.style.display = "none";
+    prev.disabled = true;
+    next.disabled = true;
+    meta.textContent = "";
+    return;
+  }
+  wrap.classList.remove("hidden");
+  wrap.setAttribute("aria-hidden","false");
+  wrap.style.display = "inline-flex";
+  meta.textContent = (page + 1) + "/" + totalPages;
+  prev.disabled = page <= 0;
+  next.disabled = page >= (totalPages - 1);
+}
+
+function changePage(panelKey, delta) {
+  const masterId = LAST_SEARCH[panelKey];
+  if (masterId === null || masterId === undefined) return;
+  PAGE_STATE[panelKey] = (PAGE_STATE[panelKey] || 0) + delta;
+  renderInterchanges(panelKey, masterId, { keepPage: true });
+}
+
+function refreshPagination(panelKey) {
+  const masterId = LAST_SEARCH[panelKey];
+  if (masterId === null || masterId === undefined) {
+    updatePagerUi(panelKey, false, 0, 0);
+    return;
+  }
+  renderInterchanges(panelKey, masterId, { keepPage: true });
 }
 
 // Loader overlay (full-page spinner)
@@ -131,11 +200,11 @@ const FOCUS_BRANDS = new Set([
 
 // Per-tab data container (filled after we fetch shards)
 const DS = {
-  bearings: { loaded:false, loading:null, detailsLoaded:false, NODES:null, GROUPS:null, NODE_GROUPS:null, DETAILS:null, SEARCH:null, SEARCH_BY_BRAND:null, BRANDS:null, BRAND_NORMS:null, SHARDS:null, TAB_DIR:null, BRAND_PART_INDEX:null, PART_ONLY_INDEX:null },
-  couplings: { loaded:false, loading:null, detailsLoaded:false, NODES:null, GROUPS:null, NODE_GROUPS:null, DETAILS:null, SEARCH:null, SEARCH_BY_BRAND:null, BRANDS:null, BRAND_NORMS:null, SHARDS:null, TAB_DIR:null, BRAND_PART_INDEX:null, PART_ONLY_INDEX:null },
-  motors:   { loaded:false, loading:null, detailsLoaded:false, NODES:null, GROUPS:null, NODE_GROUPS:null, DETAILS:null, SEARCH:null, SEARCH_BY_BRAND:null, BRANDS:null, BRAND_NORMS:null, SHARDS:null, TAB_DIR:null, BRAND_PART_INDEX:null, PART_ONLY_INDEX:null },
-  oils:     { loaded:false, loading:null, detailsLoaded:false, NODES:null, GROUPS:null, NODE_GROUPS:null, DETAILS:null, SEARCH:null, SEARCH_BY_BRAND:null, BRANDS:null, BRAND_NORMS:null, SHARDS:null, TAB_DIR:null, BRAND_PART_INDEX:null, PART_ONLY_INDEX:null },
-  pumps:    { loaded:false, loading:null, detailsLoaded:false, NODES:null, GROUPS:null, NODE_GROUPS:null, DETAILS:null, SEARCH:null, SEARCH_BY_BRAND:null, BRANDS:null, BRAND_NORMS:null, SHARDS:null, TAB_DIR:null, BRAND_PART_INDEX:null, PART_ONLY_INDEX:null },
+  bearings: { loaded:false, loading:null, detailsLoaded:false, NODES:null, GROUPS:null, NODE_GROUPS:null, DETAILS:null, SEARCH:null, SEARCH_BY_BRAND:null, BRANDS:null, BRAND_NORMS:null, SHARDS:null, TAB_DIR:null, CACHE_BUST:"", BRAND_PART_INDEX:null, PART_ONLY_INDEX:null },
+  couplings: { loaded:false, loading:null, detailsLoaded:false, NODES:null, GROUPS:null, NODE_GROUPS:null, DETAILS:null, SEARCH:null, SEARCH_BY_BRAND:null, BRANDS:null, BRAND_NORMS:null, SHARDS:null, TAB_DIR:null, CACHE_BUST:"", BRAND_PART_INDEX:null, PART_ONLY_INDEX:null },
+  motors:   { loaded:false, loading:null, detailsLoaded:false, NODES:null, GROUPS:null, NODE_GROUPS:null, DETAILS:null, SEARCH:null, SEARCH_BY_BRAND:null, BRANDS:null, BRAND_NORMS:null, SHARDS:null, TAB_DIR:null, CACHE_BUST:"", BRAND_PART_INDEX:null, PART_ONLY_INDEX:null },
+  oils:     { loaded:false, loading:null, detailsLoaded:false, NODES:null, GROUPS:null, NODE_GROUPS:null, DETAILS:null, SEARCH:null, SEARCH_BY_BRAND:null, BRANDS:null, BRAND_NORMS:null, SHARDS:null, TAB_DIR:null, CACHE_BUST:"", BRAND_PART_INDEX:null, PART_ONLY_INDEX:null },
+  pumps:    { loaded:false, loading:null, detailsLoaded:false, NODES:null, GROUPS:null, NODE_GROUPS:null, DETAILS:null, SEARCH:null, SEARCH_BY_BRAND:null, BRANDS:null, BRAND_NORMS:null, SHARDS:null, TAB_DIR:null, CACHE_BUST:"", BRAND_PART_INDEX:null, PART_ONLY_INDEX:null },
 };
 
 const TAB_DIR = {
@@ -146,28 +215,37 @@ const TAB_DIR = {
   pumps: "./data/pumps"
 };
 
-async function fetchJSON(url) {
-  const res = await fetch(url, { cache: "force-cache" });
+async function fetchJSON(url, cacheMode = "force-cache") {
+  const res = await fetch(url, { cache: cacheMode });
   if (!res.ok) throw new Error("Fetch failed (" + res.status + "): " + url);
   return res.json();
 }
 
-async function fetchText(url) {
-  const res = await fetch(url, { cache: "force-cache" });
+async function fetchText(url, cacheMode = "force-cache") {
+  const res = await fetch(url, { cache: cacheMode });
   if (!res.ok) throw new Error("Fetch failed (" + res.status + "): " + url);
   return res.text();
 }
 
-async function fetchShardSeries(baseDir, list, label, onProgress) {
+async function fetchShardSeries(baseDir, list, label, onProgress, cacheBust = "") {
   if (!list || !list.length) return null;
   try {
-    const texts = await Promise.all(list.map(async (f) => {
-      const text = await fetchText(baseDir + "/" + f);
+    const parts = await Promise.all(list.map(async (f) => {
+      const data = await fetchJSON(baseDir + "/" + f + cacheBust);
       if (onProgress) onProgress();
-      return text;
+      return data;
     }));
-    const combined = texts.join("");
-    return JSON.parse(combined);
+    if (parts.length === 1) return parts[0];
+    let allArrays = true;
+    const merged = [];
+    for (const part of parts) {
+      if (!Array.isArray(part)) {
+        allArrays = false;
+        break;
+      }
+      merged.push(...part);
+    }
+    return allArrays ? merged : parts;
   } catch (err) {
     const msg = (err && err.message) ? err.message : String(err);
     throw new Error((label ? (label + " ") : "") + msg);
@@ -188,8 +266,9 @@ async function loadTabData(panelKey, showProgress = false) {
   if (d.loading) return d.loading;
   d.loading = (async () => {
     const baseDir = TAB_DIR[panelKey];
-    const manifest = await fetchJSON(baseDir + "/manifest.json");
+    const manifest = await fetchJSON(baseDir + "/manifest.json", "no-store");
     const shards = manifest?.shards || {};
+    const cacheBust = manifest?.build ? ("?v=" + manifest.build) : "";
 
   const totalShards = (shards.nodes?.length || 0) +
                       (shards.groups?.length || 0) +
@@ -205,11 +284,11 @@ async function loadTabData(panelKey, showProgress = false) {
   const onProgress = showProgress ? tickLoadStatus : null;
 
   const [nodes, groups, nodeGroups, search, brands] = await Promise.all([
-    fetchShardSeries(baseDir, shards.nodes, "nodes", onProgress),
-    fetchShardSeries(baseDir, shards.groups, "groups", onProgress),
-    fetchShardSeries(baseDir, shards.node_groups, "node_groups", onProgress),
-    fetchShardSeries(baseDir, shards.search, "search", onProgress),
-    fetchShardSeries(baseDir, shards.brands, "brands", onProgress),
+    fetchShardSeries(baseDir, shards.nodes, "nodes", onProgress, cacheBust),
+    fetchShardSeries(baseDir, shards.groups, "groups", onProgress, cacheBust),
+    fetchShardSeries(baseDir, shards.node_groups, "node_groups", onProgress, cacheBust),
+    fetchShardSeries(baseDir, shards.search, "search", onProgress, cacheBust),
+    fetchShardSeries(baseDir, shards.brands, "brands", onProgress, cacheBust),
   ]);
 
     d.NODES = Array.isArray(nodes) ? nodes : [];
@@ -223,6 +302,7 @@ async function loadTabData(panelKey, showProgress = false) {
     d.detailsLoaded = false;
     d.SHARDS = shards;
     d.TAB_DIR = baseDir;
+    d.CACHE_BUST = cacheBust;
     d.loaded = true;
 
     fillBrandOptions(panelKey);
@@ -347,12 +427,15 @@ function brandAllowedForFocus(brand) {
   return FOCUS_BRANDS.has(b);
 }
 
-function renderInterchanges(panelKey, masterId) {
+function renderInterchanges(panelKey, masterId, opts = {}) {
+  const keepPage = opts.keepPage === true;
+  if (!keepPage) PAGE_STATE[panelKey] = 0;
   const d = DS[panelKey];
   const prefix = panelKey === "pumps" ? "p" : panelKey[0];
   const res = byId(`results-${prefix}`); if (!res) return; res.innerHTML = "";
   if (masterId === null || masterId === undefined || !d.NODES || !d.NODES[masterId]) {
     res.innerHTML = '<div class="empty">No matches found for that brand + part number.</div>';
+    updatePagerUi(panelKey, false, 0, 0);
     return;
   }
 
@@ -403,10 +486,21 @@ function renderInterchanges(panelKey, masterId) {
     empty.className = "empty";
     empty.textContent = "No interchanges found.";
     res.appendChild(empty);
+    updatePagerUi(panelKey, false, 0, 0);
     return;
   }
 
-  neighbors.forEach(id => {
+  const usePager = applyTinyMode() && neighbors.length > PAGE_SIZE_SMALL;
+  const totalPages = usePager ? Math.ceil(neighbors.length / PAGE_SIZE_SMALL) : 1;
+  let page = PAGE_STATE[panelKey] || 0;
+  if (!usePager) page = 0;
+  if (page >= totalPages) page = totalPages - 1;
+  if (page < 0) page = 0;
+  PAGE_STATE[panelKey] = page;
+  updatePagerUi(panelKey, usePager, page, totalPages);
+
+  const visible = usePager ? neighbors.slice(page * PAGE_SIZE_SMALL, (page + 1) * PAGE_SIZE_SMALL) : neighbors;
+  visible.forEach(id => {
     const pill = document.createElement("div");
     const node = d.NODES[id];
     const hasSpecs = (nodeFlags(node) & FLAG_SPECS) !== 0;
@@ -609,6 +703,8 @@ function wirePanel(panelKey) {
   const resetBtn = byId(`resetBtn-${prefix}`);
   const suggestBox = byId(`suggestList-${prefix}`);
   const focusChk = byId(`focus-${prefix}`);
+  const pagerPrev = byId(`pagerPrev-${prefix}`);
+  const pagerNext = byId(`pagerNext-${prefix}`);
 
   async function refreshSuggestions() {
     const q = norm(input?.value || "");
@@ -630,6 +726,9 @@ function wirePanel(panelKey) {
   input?.addEventListener("input", refreshSuggestions);
   brandSel?.addEventListener("change", async () => {
     const res = byId(`results-${prefix}`); if (res) res.innerHTML = "";
+    LAST_SEARCH[panelKey] = null;
+    PAGE_STATE[panelKey] = 0;
+    updatePagerUi(panelKey, false, 0, 0);
     await refreshSuggestions();
   });
 
@@ -666,6 +765,8 @@ function wirePanel(panelKey) {
   input?.addEventListener("blur", () => setTimeout(() => hideSuggest(panelKey), 120));
   searchBtn?.addEventListener("click", () => doSearch(panelKey));
   resetBtn?.addEventListener("click", () => resetAll(panelKey));
+  pagerPrev?.addEventListener("click", () => changePage(panelKey, -1));
+  pagerNext?.addEventListener("click", () => changePage(panelKey, 1));
 
   if (focusChk) {
     focusChk.checked = focusOn;
@@ -707,7 +808,7 @@ async function ensureDetails(panelKey, showProgress = false) {
     return;
   }
   if (showProgress) showLoadStatus("Loading specifications", shards.length);
-  const entries = await fetchShardSeries(d.TAB_DIR, shards, "details", showProgress ? tickLoadStatus : null);
+  const entries = await fetchShardSeries(d.TAB_DIR, shards, "details", showProgress ? tickLoadStatus : null, d.CACHE_BUST || "");
   d.DETAILS = buildDetailsMap(entries || []);
   d.detailsLoaded = true;
 }
@@ -733,6 +834,8 @@ function doSearch(panelKey) {
 
   if (!d.loaded) {
     res.innerHTML = '<div class="empty">Loading data…</div>';
+    updatePagerUi(panelKey, false, 0, 0);
+    LAST_SEARCH[panelKey] = null;
     ensureLoaded(panelKey).then(() => doSearch(panelKey));
     return;
   }
@@ -747,6 +850,8 @@ function doSearch(panelKey) {
 
   if (!partRaw.trim()) {
     if (res) res.innerHTML = '<div class="empty">Enter a part number to search.</div>';
+    updatePagerUi(panelKey, false, 0, 0);
+    LAST_SEARCH[panelKey] = null;
     return;
   }
 
@@ -772,9 +877,12 @@ function doSearch(panelKey) {
 
   if (masterId === null || masterId === undefined) {
     if (res) res.innerHTML = '<div class="empty">No matches found for that part number.</div>';
+    updatePagerUi(panelKey, false, 0, 0);
+    LAST_SEARCH[panelKey] = null;
     return;
   }
 
+  LAST_SEARCH[panelKey] = masterId;
   renderInterchanges(panelKey, masterId);
 }
 
@@ -783,6 +891,9 @@ function resetAll(panelKey) {
   byId(`brand-${prefix}`).value = "";
   byId(`part-${prefix}`).value = "";
   byId(`results-${prefix}`).innerHTML = "";
+  LAST_SEARCH[panelKey] = null;
+  PAGE_STATE[panelKey] = 0;
+  updatePagerUi(panelKey, false, 0, 0);
   hideSuggest(panelKey);
   closeModal();
   byId(`part-${prefix}`).focus();
@@ -807,6 +918,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   unlockUI();
   hideLoader();
+  applyTinyMode();
   prewarmTabs();
 
   document.getElementById("tabs")?.addEventListener("click", (e) => {
@@ -828,4 +940,8 @@ document.addEventListener("DOMContentLoaded", () => {
   byId("printSpecsBtn")?.addEventListener("click", () => window.print());
   byId("modalBackdrop")?.addEventListener("click", (e) => { if (e.target === byId("modalBackdrop")) closeModal(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+  window.addEventListener("resize", () => {
+    applyTinyMode();
+    ["bearings","couplings","motors","oils","pumps"].forEach(refreshPagination);
+  });
 });

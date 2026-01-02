@@ -4,6 +4,7 @@
   --muted: #6b7280; --text: #0f172a; --accent: #2563eb; --accent-2: #059669;
   --danger: #dc2626; --border: #e5e7eb; --shadow: 0 6px 24px rgba(15,23,42,.08);
   --radius: 14px;
+  --tiny-screen: 0;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; background: white; color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial; }
@@ -39,7 +40,7 @@ html, body { height: 100%; margin: 0; background: white; color: var(--text); fon
 .controls { display: grid; grid-template-columns: 220px 1fr 160px 120px 110px; gap: 12px; padding: 16px; position: sticky; top: 0; z-index: 5; background: rgba(255,255,255,0.85); backdrop-filter: blur(6px); border-bottom: 1px solid var(--border); border-top-left-radius: var(--radius); border-top-right-radius: var(--radius); }
 .action-cell { align-self: end; }
 label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 6px; }
-select, input[type="text"], button { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); outline: none; }
+select, input[type="text"], button { width: 100%; padding: 10px; border-radius: 11px; border: 1px solid var(--border); background: var(--surface); color: var(--text); outline: none; }
 input[type="text"]::placeholder { color: #94a3b8; }
 button.primary { background: linear-gradient(135deg, #60a5fa, var(--accent)); border: none; color: #fff; font-weight: 700; letter-spacing: .3px; cursor: pointer; transition: transform .06s, filter .2s; }
 button.primary:hover { filter: brightness(1.05); }
@@ -62,9 +63,21 @@ button.ghost:hover { background: var(--surface-2); border-color: #d1d5db; }
 .empty { color: var(--muted); font-size: 14px; padding: 8px 12px; }
 
 /* Focus toggle */
-.focus-wrap { display: flex; align-items: end; }
-.toggle { display: inline-flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); font-weight: 700; }
+.focus-wrap { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); font-weight: 700; }
 .toggle input { width: 18px; height: 18px; }
+
+/* Pagination (small screens only) */
+.pager { display: none; align-items: center; gap: 6px; }
+.pager.hidden { display: none !important; }
+.pager-meta { font-size: 12px; color: var(--muted); min-width: 36px; text-align: center; }
+.pager button { width: auto; padding: 5px 9px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface); font-weight: 700; font-size: 12px; cursor: pointer; }
+.pager button:disabled { opacity: .5; cursor: default; }
+
+/* Small-screen fallback (JS toggles .tiny on body) */
+.tiny .subtitle { display: none !important; }
+.tiny .controls .action-cell .primary { display: none !important; }
+.tiny .pager { display: inline-flex; }
 
 /* Modal */
 .specs-modal-backdrop { position: fixed; inset: 0; background: rgba(255,255,255,0.75); display: none; align-items: center; justify-content: center; z-index: 50; }
@@ -109,7 +122,7 @@ button.ghost:hover { background: var(--surface-2); border-color: #d1d5db; }
   .controls > div { width: 100%; }
   .action-cell { align-self: stretch; }
   .focus-wrap { align-items: center; }
-  select, input[type="text"], button { padding: 10px; border-radius: 10px; }
+  select, input[type="text"], button { padding: 9px; border-radius: 9px; }
   .results { grid-template-columns: 1fr; padding: 10px; }
   .pill { height: auto; font-size: 13px; }
   .specs-body { padding: 12px; }
@@ -117,12 +130,16 @@ button.ghost:hover { background: var(--surface-2); border-color: #d1d5db; }
   .thumb, .thumb img { width: 140px; height: 140px; }
   .docs { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 }
-@media (max-width: 360px), (max-height: 360px) {
+@media (max-width: 420px), (max-height: 420px) {
+  :root { --tiny-screen: 1; }
   .wrap { margin: 16px auto; }
-  .subtitle { font-size: 12px; }
+  .subtitle { display: none !important; }
+  .controls .action-cell .primary { display: none; }
   .controls { gap: 8px; padding: 10px; }
-  .toggle { padding: 8px 10px; }
+  .toggle { padding: 8px 9px; }
   .load-status { padding: 8px 10px 10px; }
+  .pager { display: inline-flex; }
+  .pager.hidden { display: none !important; }
 }
 @media print {
   body * { visibility: hidden !important; }
