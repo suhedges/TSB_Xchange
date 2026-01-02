@@ -123,7 +123,11 @@ function buildSpecsClipboardText(panelKey, targetId, specs) {
     if (skipKeys.has(keyLower)) return;
     const val = normalizeSpecValue(v);
     if (!val) return;
-    lines.push(k + "\t" + val);
+    const parts = val.split(/\n+/).map(s => s.trim()).filter(Boolean);
+    if (!parts.length) return;
+    parts.forEach(part => {
+      lines.push(k + "\t" + part);
+    });
   });
   return lines.join("\n");
 }
