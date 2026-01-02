@@ -124,8 +124,9 @@ button.ghost:hover { background: var(--surface-2); border-color: #d1d5db; }
   .action-cell { align-self: stretch; }
   .focus-wrap { align-items: center; }
   select, input[type="text"], button { padding: 9px; border-radius: 9px; }
-  .results { grid-template-columns: 1fr; padding: 10px; }
-  .pill { height: auto; font-size: 13px; }
+  .results { grid-template-columns: 1fr; padding: 10px; overflow-x: hidden; }
+  .pill { width: 100%; max-width: 100%; height: auto; font-size: 13px; flex-wrap: wrap; }
+  .pill .part { word-break: break-word; overflow-wrap: anywhere; }
   .specs-body { padding: 12px; }
   .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
   .thumb, .thumb img { width: 140px; height: 140px; }

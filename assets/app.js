@@ -8,6 +8,7 @@ const FLAG_DOCS = 4;
 const PAGE_SIZE_SMALL = 5;
 const PAGE_STATE = { bearings: 0, couplings: 0, motors: 0, oils: 0, pumps: 0 };
 const LAST_SEARCH = { bearings: null, couplings: null, motors: null, oils: null, pumps: null };
+let LAST_SPECS_TEXT = "";
 function lowerBoundPrefix(arr, prefix) { let lo = 0, hi = arr.length; while (lo < hi) { const mid = (lo + hi) >>> 1; if (arr[mid][0] < prefix) lo = mid + 1; else hi = mid; } return lo; }
 function escapeHtml(s) { return (s ?? "").toString().replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;"); }
 function nodeBrand(d, id) {
@@ -74,6 +75,41 @@ function applyTinyMode() {
   return tiny;
 }
 
+function buildSpecsClipboardText(panelKey, targetId, specs) {
+  if (!specs) return "";
+  const d = DS[panelKey];
+  const title = nodeBrand(d, targetId) + ": " + nodePart(d, targetId);
+  const lines = [title, "Key\tValue"];
+  Object.entries(specs).forEach(([k, v]) => {
+    const val = (v ?? "").toString().replace(/\s+/g, " ").trim();
+    lines.push(k + "\t" + val);
+  });
+  return lines.join("\n");
+}
+
+async function copyTextToClipboard(text) {
+  if (!text) return false;
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {}
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {}
+  return false;
+}
+
 function isPrintAllowed() {
   try {
     if (window.frameElement && window.frameElement.hasAttribute("sandbox")) {
@@ -99,6 +135,24 @@ function showPrintBlockedNotice() {
   if (sub) {
     sub.textContent = "Printing disabled in embedded view. Open in a new tab to print.";
   }
+}
+
+async function handlePrintClick() {
+  const copied = await copyTextToClipboard(LAST_SPECS_TEXT);
+  if (!isPrintAllowed()) {
+    const extra = copied ? "Specifications copied to clipboard." : "Unable to copy specifications to clipboard.";
+    const sub = byId("specsSub");
+    if (sub) sub.textContent = "Printing disabled in embedded view. Open in a new tab to print. " + extra;
+    return;
+  }
+  if (copied) {
+    const sub = byId("specsSub");
+    if (sub && !sub.textContent) sub.textContent = "Specifications copied to clipboard.";
+  } else {
+    const sub = byId("specsSub");
+    if (sub && !sub.textContent) sub.textContent = "Unable to copy specifications to clipboard.";
+  }
+  window.print();
 }
 
 function updatePagerUi(panelKey, show, page, totalPages) {
@@ -217,13 +271,7 @@ function ensureModal() {
   const body = document.createElement("div"); body.id = "specsBody"; body.className = "specs-body";
   modal.appendChild(head); modal.appendChild(body); backdrop.appendChild(modal); document.body.appendChild(backdrop);
   closeBtn.addEventListener("click", closeModal);
-  printBtn.addEventListener("click", () => {
-    if (isPrintAllowed()) {
-      window.print();
-    } else {
-      showPrintBlockedNotice();
-    }
-  });
+  printBtn.addEventListener("click", handlePrintClick);
   backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeModal(); });
   applyPrintAvailability();
   return backdrop;
@@ -673,6 +721,7 @@ async function openSpecs(panelKey, targetId) {
     alert("No specifications are available for this part.");
     return;
   }
+  LAST_SPECS_TEXT = buildSpecsClipboardText(panelKey, targetId, mainSpecs);
 
   title.textContent = nodeBrand(d, targetId) + ": " + nodePart(d, targetId);
 
