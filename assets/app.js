@@ -75,13 +75,54 @@ function applyTinyMode() {
   return tiny;
 }
 
+function htmlToTextWithLines(html) {
+  if (!html) return "";
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = html;
+  const walk = (node) => {
+    if (!node) return "";
+    if (node.nodeType === Node.TEXT_NODE) {
+      return (node.nodeValue || "").replace(/\s+/g, " ");
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return "";
+    const tag = node.tagName.toLowerCase();
+    if (tag === "br") return "\n";
+    if (tag === "li") {
+      return "- " + Array.from(node.childNodes).map(walk).join("").trim() + "\n";
+    }
+    if (tag === "p" || tag === "div" || tag === "ul" || tag === "ol") {
+      return Array.from(node.childNodes).map(walk).join("") + "\n";
+    }
+    return Array.from(node.childNodes).map(walk).join("");
+  };
+  const raw = Array.from(wrapper.childNodes).map(walk).join("");
+  return raw.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function normalizeSpecValue(val) {
+  if (val === null || val === undefined) return "";
+  if (typeof val === "string") {
+    const raw = val.trim();
+    if (!raw) return "";
+    if (/<[a-z][\s\S]*>/i.test(raw)) {
+      return htmlToTextWithLines(raw);
+    }
+    return raw.replace(/\s+/g, " ");
+  }
+  return String(val).replace(/\s+/g, " ");
+}
+
 function buildSpecsClipboardText(panelKey, targetId, specs) {
   if (!specs) return "";
+  const skipKeys = new Set(["images", "image", "pdf", "document", "documents", "docs"]);
   const d = DS[panelKey];
   const title = nodeBrand(d, targetId) + ": " + nodePart(d, targetId);
   const lines = [title, "Key\tValue"];
   Object.entries(specs).forEach(([k, v]) => {
-    const val = (v ?? "").toString().replace(/\s+/g, " ").trim();
+    const keyLower = String(k || "").trim().toLowerCase();
+    if (skipKeys.has(keyLower)) return;
+    const val = normalizeSpecValue(v);
+    if (!val) return;
     lines.push(k + "\t" + val);
   });
   return lines.join("\n");
