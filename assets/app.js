@@ -68,7 +68,37 @@ function applyTinyMode() {
   document.querySelectorAll(".controls .action-cell .primary").forEach(el => {
     el.style.display = tiny ? "none" : "";
   });
+  document.querySelectorAll(".footer-note").forEach(el => {
+    el.style.display = tiny ? "none" : "";
+  });
   return tiny;
+}
+
+function isPrintAllowed() {
+  try {
+    if (window.frameElement && window.frameElement.hasAttribute("sandbox")) {
+      const sb = (window.frameElement.getAttribute("sandbox") || "").trim();
+      if (!sb) return false;
+      return sb.split(/\s+/).includes("allow-modals");
+    }
+  } catch {}
+  return true;
+}
+
+function applyPrintAvailability() {
+  const btn = byId("printSpecsBtn");
+  if (!btn) return;
+  const ok = isPrintAllowed();
+  btn.disabled = !ok;
+  btn.setAttribute("aria-disabled", ok ? "false" : "true");
+  btn.title = ok ? "Print" : "Printing disabled in embedded view";
+}
+
+function showPrintBlockedNotice() {
+  const sub = byId("specsSub");
+  if (sub) {
+    sub.textContent = "Printing disabled in embedded view. Open in a new tab to print.";
+  }
 }
 
 function updatePagerUi(panelKey, show, page, totalPages) {
@@ -187,8 +217,15 @@ function ensureModal() {
   const body = document.createElement("div"); body.id = "specsBody"; body.className = "specs-body";
   modal.appendChild(head); modal.appendChild(body); backdrop.appendChild(modal); document.body.appendChild(backdrop);
   closeBtn.addEventListener("click", closeModal);
-  printBtn.addEventListener("click", () => window.print());
+  printBtn.addEventListener("click", () => {
+    if (isPrintAllowed()) {
+      window.print();
+    } else {
+      showPrintBlockedNotice();
+    }
+  });
   backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeModal(); });
+  applyPrintAvailability();
   return backdrop;
 }
 function closeModal() { const backdrop = ensureModal(); backdrop.style.display = "none"; backdrop.setAttribute("aria-hidden","true"); }
@@ -614,7 +651,8 @@ async function openSpecs(panelKey, targetId) {
   const sub = byId("specsSub");
   if (!body || !title || !sub) return alert("Unable to open specs view.");
 
-  body.innerHTML = ""; sub.textContent = "";
+  body.innerHTML = "";
+  sub.textContent = isPrintAllowed() ? "" : "Printing disabled in embedded view. Open in a new tab to print.";
   const main = d && d.NODES && d.NODES[targetId];
   if (!main) { alert("No specifications are available for this part."); return; }
   if ((nodeFlags(main) & FLAG_SPECS) === 0) {
@@ -919,6 +957,7 @@ document.addEventListener("DOMContentLoaded", () => {
   unlockUI();
   hideLoader();
   applyTinyMode();
+  applyPrintAvailability();
   prewarmTabs();
 
   document.getElementById("tabs")?.addEventListener("click", (e) => {
@@ -937,7 +976,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   byId("closeModal")?.addEventListener("click", closeModal);
-  byId("printSpecsBtn")?.addEventListener("click", () => window.print());
   byId("modalBackdrop")?.addEventListener("click", (e) => { if (e.target === byId("modalBackdrop")) closeModal(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
   window.addEventListener("resize", () => {

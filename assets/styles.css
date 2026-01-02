@@ -77,6 +77,7 @@ button.ghost:hover { background: var(--surface-2); border-color: #d1d5db; }
 /* Small-screen fallback (JS toggles .tiny on body) */
 .tiny .subtitle { display: none !important; }
 .tiny .controls .action-cell .primary { display: none !important; }
+.tiny .footer-note { display: none !important; }
 .tiny .pager { display: inline-flex; }
 
 /* Modal */
@@ -138,6 +139,7 @@ button.ghost:hover { background: var(--surface-2); border-color: #d1d5db; }
   .controls { gap: 8px; padding: 10px; }
   .toggle { padding: 8px 9px; }
   .load-status { padding: 8px 10px 10px; }
+  .footer-note { display: none !important; }
   .pager { display: inline-flex; }
   .pager.hidden { display: none !important; }
 }
